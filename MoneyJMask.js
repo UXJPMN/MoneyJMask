@@ -1,4 +1,3 @@
-var permitted = /[0-9\,]/g;
 var masks;
 
 function addDots(str, field){
@@ -9,42 +8,27 @@ function addDots(str, field){
     field.value = splitted[0].replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.') + ',' + splitted[1];
 }
 
-function charRestrict(field, e){
-    var code;
-    if(!e){
-        var e = window.event;
-    }
-    if(e.keyCode){
-        code = e.keyCode
-    }
-    else if(e.which){
-        code = e.which
-    }
-    if(code==27) {
-        field.blur();
-        return false;
-    }
-    var c = String.fromCharCode(code);
-    
-    if(!e.ctrlKey && code!=9 && code!=8 && code!=36 && code!=37 && code!=38 && (code!=39 || (code==39 && character=="'")) && code!=40){
-        if(c.match(permitted)){
-            const decIndex = field.value.indexOf(',');
-            if(decIndex > -1){
-                if(c === ','){
-                    e.preventDefault();
-                    return false;
+function inputRestrict(field, e){
+    if(e.inputType.indexOf("insert") > -1){
+        let v = field.value;
+        let inputed = v.split('')[v.length - 1];
+        if(inputed.match(/[0-9\,]/)){
+            const commaIndex = v.indexOf(',');
+            if(commaIndex > -1){
+                if(v.match(/(,).*(\1)/)){
+                    field.value = v.substring(0, v.length - 1);
+                    return
                 }
-                if(field.value.length > (decIndex + 2) && e.target.selectionStart > decIndex)
-                {
-                    e.preventDefault();
-                    return false;
+                else if(v.length > (commaIndex + 3) && e.target.selectionStart > commaIndex){
+                    field.value = v.substring(0, v.length - 1);
                 }
             }
-            return true;
+            else{
+                return
+            }
         }
         else{
-            e.preventDefault();
-            return false;
+            field.value = v.substring(0, v.length - 1);
         }
     }
 }
@@ -85,14 +69,16 @@ function createMask(field){
         addDots(v, field);
         return;
     }
+
+    addDots(v, field);
 }
 
 function setMasks(){
     masks = document.getElementsByClassName('money-mask');
     for(let mask in masks){
         masks[mask].addEventListener("focus", e => {
-            document.addEventListener("keypress", e => {
-                charRestrict(masks[mask], e)
+            document.addEventListener("input", e => {
+                inputRestrict(masks[mask], e)
             })
         });
         masks[mask].addEventListener("blur", function(){
@@ -104,3 +90,15 @@ function setMasks(){
 document.addEventListener("DOMContentLoaded", event => {
     setMasks();   
 })
+
+function fieldValue(id){
+    let field = document.getElementById(id);
+    field.hasClass('field-mask') ? () => {
+        let v = field.value;
+        let arrV = v.split(',');
+        let arrInt = arrV[0].split('').filter(el => el != '.');
+        let fInt = parseInt(arrInt.join(''));
+        let fDec = parseInt(arrV[1]);
+        return (fInt + (fDec/100));
+    }: () => null
+}
